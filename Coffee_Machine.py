@@ -1,3 +1,5 @@
+import sys
+
 # Coffee Machine Menu
 MENU = {
     "espresso": {
@@ -33,71 +35,66 @@ resources = {
     "coffee": 100
 }
 
-# Function to check if there are sufficient resources for the chosen drink
 def is_resource_sufficient(order_ingredients):
-    # Loop through each ingredient required for the drink
+    """Checks if there are enough resources for the chosen drink."""
     for item in order_ingredients:
-        # Check if the required amount is more than the available amount
-        if order_ingredients[item] >= resources[item]:
-            print(f"​Sorry there is not enough {item}.")
+        if order_ingredients[item] > resources[item]:  # Fixed `>=` issue
+            print(f"​Sorry, there is not enough {item}.")
             return False
     return True
 
-# Function to process coin input and calculate the total money inserted
 def process_coin():
+    """Processes inserted coins and returns total money inserted."""
     print("Please insert coins.")
-    # Ask user for the number of each type of coin and calculate total
-    total = int(input("how many quarters?: ")) * 0.25
-    total += int(input("how many dimes?: ")) * 0.1
-    total += int(input("how many nickles?: ")) * 0.05
-    total += int(input("how many pennies?: ")) * 0.01
+    
+    if sys.stdin.isatty():  # Interactive mode
+        total = int(input("how many quarters?: ")) * 0.25
+        total += int(input("how many dimes?: ")) * 0.1
+        total += int(input("how many nickels?: ")) * 0.05
+        total += int(input("how many pennies?: ")) * 0.01
+    else:  # Non-interactive mode (Jenkins)
+        total = 5.0  # Insert default sufficient amount
+        print("Inserted $5.0 (Auto Mode)")
+    
     return total    
 
-# Function to check if the transaction is successful
-def is_transaction_succesful(money_received, drink_cost):
-    # Check if the money received is enough to cover the cost of the drink
+def is_transaction_successful(money_received, drink_cost):
+    """Checks if the transaction is successful."""
+    global profit
     if money_received >= drink_cost:
-        # Calculate and return the change if any
         change = round(money_received - drink_cost, 2)
         print(f"Here is ${change} in change.")
-        # Update the profit
-        global profit
         profit += drink_cost
         return True
     else:
-        print("Sorry that's not enough money. Money refunded.")
+        print("Sorry, that's not enough money. Money refunded.")
         return False
 
-# Function to make the coffee by deducting the required ingredients from the resources
 def make_coffee(drink_name, order_ingredients):
-    """Deduct the required ingredients from the resources."""
+    """Deducts ingredients and serves the coffee."""
     for item in order_ingredients:
         resources[item] -= order_ingredients[item]
     print(f"Here is your {drink_name} ☕️. Enjoy!")
 
-# Variable to keep the coffee machine running
+# Coffee Machine Loop
 is_on = True
 
-# Main loop to run the coffee machine
 while is_on:
-    # Ask the user what they would like
-    choice = input("What would you like? (espresso/latte/cappuccino):")
+    if sys.stdin.isatty():  # Interactive mode
+        choice = input("What would you like? (espresso/latte/cappuccino): ")
+    else:  # Non-interactive mode (Jenkins)
+        choice = "latte"
+        print("Auto-selected: latte")
     
-    # Turn off the machine if the user types "off"
     if choice == "off":
         is_on = False
-    
-    # Print a report of the resources and profit if the user types "report"
     elif choice == "report":
-        print(f"Water: {resources['water']}\nMilk:{resources['milk']}\nCoffee:{resources['coffee']}\nMoney: {profit}")
-    
-    # Process the chosen drink
-    else:
+        print(f"Water: {resources['water']}ml\nMilk: {resources.get('milk', 0)}ml\nCoffee: {resources['coffee']}g\nMoney: ${profit}")
+    elif choice in MENU:
         drink = MENU[choice]
-        # Check if there are sufficient resources to make the drink
         if is_resource_sufficient(drink['ingredients']):
-            # Process coins and check if the transaction is successful
             payment = process_coin()
-            if is_transaction_succesful(payment, drink['cost']):
-                # Make the coffee
+            if is_transaction_successful(payment, drink['cost']):
                 make_coffee(drink_name=choice, order_ingredients=drink['ingredients'])
+    else:
+        print("Invalid choice, please select a valid option.")
